@@ -6,6 +6,7 @@
   "scripts": {
     "test": "node --test tests/*.test.mjs",
     "traceability": "node scripts/check-traceability.mjs",
+    "coverage:no-new-gaps": "node scripts/check-traceability.mjs --no-new-gaps",
     "coverage:full": "node scripts/check-traceability.mjs --require-full"
   },
   "engines": {

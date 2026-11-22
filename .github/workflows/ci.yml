@@ -20,3 +20,6 @@ jobs:
       - run: npm test
         env:
           CAREEROS_RULES_CATALOG: tests/fixtures/catalog.md
+      - run: npm run coverage:no-new-gaps
+        env:
+          CAREEROS_RULES_CATALOG: tests/fixtures/catalog.md

@@ -17,10 +17,13 @@ When this repository is used as the `acceptance-tests` workspace submodule:
 
 ```powershell
 npm test
+npm run coverage:no-new-gaps
 npm run coverage:full
 ```
 
-`npm test` validates the harness and existing traceability. `npm run coverage:full` is the V1 release gate: it fails until every active catalog rule has at least one executable scenario. The first infrastructure story intentionally establishes the gate before all scenarios exist.
+`npm test` validates the harness and existing traceability. `npm run coverage:no-new-gaps` is the continuous merge gate: the initial uncovered-rule baseline can only shrink, so every newly introduced business rule must arrive with an acceptance scenario in this repository. `npm run coverage:full` is the V1 release gate: it fails until every active catalog rule has at least one executable scenario.
+
+The workspace runs the no-new-gaps command against its canonical catalog and the exact `acceptance-tests` submodule revision. Adding a rule therefore requires updating this repository first, then updating the workspace submodule pointer.
 
 For a standalone clone, set `CAREEROS_RULES_CATALOG` to the absolute path of the workspace catalog.
 

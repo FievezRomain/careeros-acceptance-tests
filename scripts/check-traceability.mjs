@@ -6,6 +6,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const defaultCatalog = resolve(root, '..', 'docs', 'business-rules', 'catalog.md');
 const catalogPath = process.env.CAREEROS_RULES_CATALOG || defaultCatalog;
 const requireFull = process.argv.includes('--require-full');
+const forbidNewGaps = process.argv.includes('--no-new-gaps');
+const baselinePath = new URL('../config/coverage-baseline.json', import.meta.url);
 
 export function collectFeatureFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -29,6 +31,14 @@ export function traceability(catalog, features) {
   };
 }
 
+export function baselineDelta(report, baseline) {
+  const accepted = new Set(baseline);
+  return {
+    newGaps: report.missing.filter((id) => !accepted.has(id)),
+    staleEntries: [...accepted].filter((id) => !report.missing.includes(id)).sort(),
+  };
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (!existsSync(catalogPath)) {
     throw new Error(`Business-rule catalog not found: ${catalogPath}. Set CAREEROS_RULES_CATALOG for a standalone clone.`);
@@ -36,6 +46,12 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const files = collectFeatureFiles(join(root, 'features'));
   const report = traceability(readFileSync(catalogPath, 'utf8'), files.map((path) => readFileSync(path, 'utf8')));
   if (report.unknown.length) throw new Error(`Unknown business-rule tags: ${report.unknown.join(', ')}`);
+  if (forbidNewGaps) {
+    const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'));
+    const delta = baselineDelta(report, baseline);
+    if (delta.newGaps.length) throw new Error(`New business rules require acceptance scenarios: ${delta.newGaps.join(', ')}`);
+    if (delta.staleEntries.length) throw new Error(`Remove covered or retired rules from the gap baseline: ${delta.staleEntries.join(', ')}`);
+  }
   if (requireFull && report.missing.length) throw new Error(`Rules without acceptance scenarios: ${report.missing.join(', ')}`);
   console.log(`${report.referenced.size}/${report.active.size} active business rules referenced; ${report.missing.length} remain.`);
 }

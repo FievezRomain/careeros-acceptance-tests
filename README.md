@@ -1,2 +1,36 @@
-# careeros-acceptance-tests
+# CareerOS Acceptance Tests
+
 Executable business acceptance and cross-service non-regression tests for CareerOS.
+
+The business-rule source of truth lives in [`careeros-workspace/docs/business-rules`](https://github.com/FievezRomain/careeros-workspace/tree/main/docs/business-rules). This repository contains black-box scenarios that prove those rules through supported product boundaries. It never reads a service database directly.
+
+## What this repository answers
+
+- Which business rules have an executable scenario?
+- Which scenario failed after a change?
+- Can the complete V1 journey still be completed?
+- Are rules being changed without corresponding acceptance coverage?
+
+## Commands
+
+When this repository is used as the `acceptance-tests` workspace submodule:
+
+```powershell
+npm test
+npm run coverage:no-new-gaps
+npm run coverage:full
+```
+
+`npm test` validates the harness and existing traceability. `npm run coverage:no-new-gaps` is the continuous merge gate: the initial uncovered-rule baseline can only shrink, so every newly introduced business rule must arrive with an acceptance scenario in this repository. `npm run coverage:full` is the V1 release gate: it fails until every active catalog rule has at least one executable scenario.
+
+The workspace runs the no-new-gaps command against its canonical catalog and the exact `acceptance-tests` submodule revision. Adding a rule therefore requires updating this repository first, then updating the workspace submodule pointer.
+
+For a standalone clone, set `CAREEROS_RULES_CATALOG` to the absolute path of the workspace catalog.
+
+## Safety
+
+Fixtures are fictitious. Real message and application delivery is disabled. Provider sandboxes require separate configuration and explicit approval.
+
+## License
+
+Apache-2.0.

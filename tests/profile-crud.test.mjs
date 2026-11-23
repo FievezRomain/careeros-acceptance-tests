@@ -76,7 +76,7 @@ test('BR-PRO-001/004/005 and BR-ACC-002: owned profile CRUD through HTTP', async
       kind: 'experience', title: 'Platform Engineer', employer: 'Example Labs', startDate: '2024-01-01', current: true,
     });
     const education = await call(baseUrl, 'owner', 'POST', '/v1/profile/items', {
-      kind: 'education', institution: 'Example Institute', qualification: 'Synthetic Diploma', startDate: '2020-09-01', endDate: '2022-06-30',
+      kind: 'education', institution: 'Example Institute', qualification: 'Synthetic Diploma', startDate: '2020-09-01', endDate: '2022-06-30', current: false,
     });
     const skill = await call(baseUrl, 'owner', 'POST', '/v1/profile/items', {
       kind: 'skill', name: 'Python', level: 'advanced',

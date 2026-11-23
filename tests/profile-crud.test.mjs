@@ -19,14 +19,16 @@ function profileBoundary() {
       }
       const item = {
         ...body,
-        itemId: `item-${++sequence}`,
+        itemId: `00000000-0000-4000-8000-${String(++sequence).padStart(12, '0')}`,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
         ...(body.kind === 'skill' && body.level ? { levelSource: 'selfDeclared' } : {}),
       };
       items.set(item.itemId, { owner, item });
       return reply(response, 201, item);
     }
     if (request.method === 'GET' && !itemId) {
-      return reply(response, 200, { items: [...items.values()].filter(x => x.owner === owner).map(x => x.item) });
+      return reply(response, 200, { items: [...items.values()].filter(x => x.owner === owner).map(x => x.item), page: {} });
     }
     const stored = items.get(itemId);
     if (!stored || stored.owner !== owner) return reply(response, 404, { code: 'NOT_FOUND' });
@@ -82,7 +84,9 @@ test('BR-PRO-001/004/005 and BR-ACC-002: owned profile CRUD through HTTP', async
     assert.equal(skill.body.levelSource, 'selfDeclared');
     assert.equal((await call(baseUrl, 'owner', 'GET', '/v1/profile/items')).body.items.length, 3);
 
-    const updated = await call(baseUrl, 'owner', 'PUT', `/v1/profile/items/${experience.body.itemId}`, { title: 'Senior Platform Engineer' });
+    const updated = await call(baseUrl, 'owner', 'PUT', `/v1/profile/items/${experience.body.itemId}`, {
+      kind: 'experience', title: 'Senior Platform Engineer', employer: 'Example Labs', startDate: '2024-01-01', current: true,
+    });
     assert.equal(updated.body.title, 'Senior Platform Engineer');
     assert.equal((await call(baseUrl, 'other', 'GET', `/v1/profile/items/${experience.body.itemId}`)).status, 404);
     assert.equal((await call(baseUrl, 'owner', 'DELETE', `/v1/profile/items/${education.body.itemId}`)).status, 204);

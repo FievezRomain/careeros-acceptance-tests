@@ -27,6 +27,11 @@ The workspace runs the no-new-gaps command against its canonical catalog and the
 
 For a standalone clone, set `CAREEROS_RULES_CATALOG` to the absolute path of the workspace catalog.
 
+`npm run test:open-web` runs the V1-057 HTTP scenarios in the workspace. Install
+the locked development environments in `services/ai-gateway` and `services/job-service`
+first. The runner starts both apps on ephemeral loopback ports with synthetic
+provider responses, synthetic identities and an isolated SQLite catalog.
+
 ## Safety
 
 Fixtures are fictitious. Real message and application delivery is disabled. Provider sandboxes require separate configuration and explicit approval.

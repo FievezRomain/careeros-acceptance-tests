@@ -50,7 +50,8 @@ Status: V1 baseline. This document contains functional rules only. Technical des
 | BR-MAT-005 | Mandatory requirements weigh more than optional preferences, and a hard eligibility conflict is shown separately from the overall score. |
 | BR-MAT-006 | A score is an aid to prioritization, not a promise of interview or employment. The interface must state this limitation. |
 | BR-MAT-007 | The person can correct an incorrectly extracted requirement; a correction produces a new result without rewriting the earlier result. |
-| BR-MAT-008 | Recommendations are ordered using the person's current criteria, but the person can inspect why each opportunity was included or excluded. |
+| BR-MAT-008 | The person's current criteria determine eligibility and ordering. A relevant profile, criteria or opportunity change reevaluates affected recommendations. Contact-only changes do not. The person can inspect the evidence and reason for inclusion or exclusion. |
+| BR-MAT-009 | A full-text opportunity version's completed requirement extraction is reused across profile evaluations that share that version. A link awaiting verification is not submitted for extraction. |
 
 ## Resume and application documents
 

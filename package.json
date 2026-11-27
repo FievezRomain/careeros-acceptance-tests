@@ -8,6 +8,7 @@
     "test:open-web": "node scripts/test-open-web.mjs",
     "test:matching": "node scripts/test-matching.mjs",
     "test:extraction": "node scripts/test-matching.mjs extraction",
+    "test:recommendations": "node scripts/test-matching.mjs recommendations",
     "traceability": "node scripts/check-traceability.mjs",
     "coverage:no-new-gaps": "node scripts/check-traceability.mjs --no-new-gaps",
     "coverage:full": "node scripts/check-traceability.mjs --require-full"

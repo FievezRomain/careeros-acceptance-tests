@@ -1,0 +1,85 @@
+"""Black-box scoring acceptance through the matching service HTTP boundary."""
+
+from uuid import UUID
+
+from fastapi.testclient import TestClient
+
+from careeros_matching.adapters.http import Settings, create_app
+from careeros_matching.application.scoring import Actor
+
+
+def uid(n):
+    return str(UUID(int=n))
+
+
+class FixtureVerifier:
+    def verify(self, token):
+        assert token == 'fixture-actor'
+        return Actor(account_id=UUID(int=1), tenant_id=UUID(int=2), scopes=('matching:score',))
+
+
+def command():
+    owner = {'accountId': uid(1), 'tenantId': uid(2)}
+    return {
+        'profile': {**owner, 'snapshotId': uid(3), 'confirmedFacts': [
+            {'factId': uid(11), 'key': 'python', 'level': 5},
+            {'factId': uid(12), 'key': 'sql', 'level': 2},
+            {'factId': uid(13), 'key': 'kubernetes', 'level': 0},
+        ]},
+        'opportunity': {**owner, 'versionId': uid(4), 'sourceAccess': 'full_text', 'requirements': [
+            {'requirementId': uid(21), 'key': 'Python', 'minimumLevel': 4, 'mandatory': True,
+             'statement': 'Python level 4'},
+            {'requirementId': uid(22), 'key': 'sql', 'minimumLevel': 4, 'mandatory': True,
+             'statement': 'SQL level 4'},
+            {'requirementId': uid(23), 'key': 'kubernetes', 'minimumLevel': 2, 'mandatory': True,
+             'hardEligibility': True, 'statement': 'Kubernetes is an eligibility requirement'},
+            {'requirementId': uid(24), 'key': 'redis', 'minimumLevel': 2, 'mandatory': False,
+             'statement': 'Redis optional'},
+            {'requirementId': uid(25), 'key': 'python', 'minimumLevel': 5, 'mandatory': False,
+             'statement': 'Python level 5 preferred'},
+        ]},
+    }
+
+
+settings = Settings(oidc_issuer='https://identity.example.invalid', oidc_audience='fixture',
+                    oidc_jwks_url='https://identity.example.invalid/jwks')
+with TestClient(create_app(settings, FixtureVerifier())) as app:
+    def post(payload):
+        return app.post('/v1/internal/matches/score', json=payload,
+                        headers={'Authorization': 'Bearer fixture-actor'})
+
+    pair = command()
+    response = post(pair)
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result == post(pair).json()
+    assert result['profileSnapshotId'] == uid(3)
+    assert result['opportunityVersionId'] == uid(4)
+    assert result['scorerVersion'] == 'baseline-v1'
+    assert result['score'] == 57  # (2 + 1 + 0 + 1) / (2 + 2 + 2 + 1), rounded
+    findings = {finding['requirementId']: finding for finding in result['findings']}
+    for requirement, status, fact in zip(
+        pair['opportunity']['requirements'],
+        ('satisfied', 'partial', 'missing', 'unknown', 'satisfied'), (11, 12, 13, None, 11),
+        strict=True,
+    ):
+        finding = findings[requirement['requirementId']]
+        assert finding['status'] == status
+        assert finding['statement'] == requirement['statement']
+        assert finding['factId'] == (uid(fact) if fact is not None else None)
+    assert result['hardConflicts'] == [uid(23)]
+    assert result['limitation'] == 'This score supports prioritization and does not guarantee an interview or employment.'
+
+    pair['profile']['confirmedFacts'] = []
+    assert post(pair).json()['score'] is None
+    pair['opportunity'].update(sourceAccess='external_to_verify', requirements=[])
+    partial = post(pair).json()
+    assert partial['sourceAccess'] == 'external_to_verify'
+    assert partial['score'] is None and partial['findings'] == []
+    for snapshot, field in (('profile', 'accountId'), ('opportunity', 'tenantId')):
+        foreign = command()
+        foreign[snapshot][field] = uid(99)
+        denied = post(foreign)
+        assert denied.status_code == 404 and denied.json()['code'] == 'SNAPSHOT_NOT_FOUND'
+
+print('V1-023 HTTP acceptance passed for BR-MAT-001 through BR-MAT-006.')

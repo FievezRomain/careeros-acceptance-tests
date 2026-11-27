@@ -36,6 +36,8 @@ provider responses, synthetic identities and an isolated SQLite catalog.
 and opportunities. Install the locked development environment in `services/matching-service`.
 `npm run test:extraction` verifies source-grounded extraction across the same HTTP
 boundary using synthetic gateway replies and no live credentials.
+`npm run test:recommendations` exercises projection delivery, score history and the
+recommendation outbox through HTTP with synthetic identities and a disposable SQLite database.
 
 ## Safety
 

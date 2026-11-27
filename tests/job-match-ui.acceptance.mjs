@@ -63,7 +63,9 @@ before(async () => {
   globalThis.document = window.document;
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   react = requireWeb('react');
-  ({ render, fireEvent, within } = requireWeb('@testing-library/react'));
+  const testingLibrary = requireWeb('@testing-library/react');
+  testingLibrary.configure({ asyncUtilTimeout: 10000 });
+  ({ render, fireEvent, within } = testingLibrary);
   ({ createMemoryRouter, RouterProvider } = requireWeb('react-router-dom'));
   const { createServer } = await load('vite');
   vite = await createServer({

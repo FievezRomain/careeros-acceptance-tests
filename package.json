@@ -9,6 +9,7 @@
     "test:matching": "node scripts/test-matching.mjs",
     "test:extraction": "node scripts/test-matching.mjs extraction",
     "test:recommendations": "node scripts/test-matching.mjs recommendations",
+    "test:job-match-ui": "node --test tests/job-match-ui.acceptance.mjs",
     "traceability": "node scripts/check-traceability.mjs",
     "coverage:no-new-gaps": "node scripts/check-traceability.mjs --no-new-gaps",
     "coverage:full": "node scripts/check-traceability.mjs --require-full"

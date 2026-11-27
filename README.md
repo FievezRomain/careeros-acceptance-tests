@@ -34,6 +34,8 @@ provider responses, synthetic identities and an isolated SQLite catalog.
 
 `npm run test:matching` checks the matching HTTP contract against synthetic profiles
 and opportunities. Install the locked development environment in `services/matching-service`.
+`npm run test:extraction` verifies source-grounded extraction across the same HTTP
+boundary using synthetic gateway replies and no live credentials.
 
 ## Safety
 

@@ -32,6 +32,9 @@ the locked development environments in `services/ai-gateway` and `services/job-s
 first. The runner starts both apps on ephemeral loopback ports with synthetic
 provider responses, synthetic identities and an isolated SQLite catalog.
 
+`npm run test:matching` checks the matching HTTP contract against synthetic profiles
+and opportunities. Install the locked development environment in `services/matching-service`.
+
 ## Safety
 
 Fixtures are fictitious. Real message and application delivery is disabled. Provider sandboxes require separate configuration and explicit approval.

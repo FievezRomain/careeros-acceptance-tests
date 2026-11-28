@@ -39,6 +39,9 @@ boundary using synthetic gateway replies and no live credentials.
 `npm run test:recommendations` exercises projection delivery, score history and the
 recommendation outbox through HTTP with synthetic identities and a disposable SQLite database.
 
+`npm run test:job-match-ui` exercises the protected React routes for V1-026 with
+synthetic service responses. Run `npm ci` in `apps/web` first.
+
 ## Safety
 
 Fixtures are fictitious. Real message and application delivery is disabled. Provider sandboxes require separate configuration and explicit approval.

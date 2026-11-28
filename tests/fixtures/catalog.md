@@ -43,14 +43,14 @@ Status: V1 baseline. This document contains functional rules only. Technical des
 
 | ID | Business rule |
 | --- | --- |
-| BR-MAT-001 | A match compares one version of an opportunity with one confirmed profile snapshot. |
+| BR-MAT-001 | A match compares one immutable opportunity version with one confirmed profile snapshot. Recommendation evaluation also pins the criteria version. Replaying those inputs with the same matcher version reuses the evaluation. The job detail shows an explanation only for its displayed opportunity version. |
 | BR-MAT-002 | A match result identifies satisfied, partially satisfied, missing and unknown requirements. |
 | BR-MAT-003 | Every positive or negative finding is supported by an opportunity statement and, when applicable, a confirmed profile fact. |
 | BR-MAT-004 | Unknown information is not treated as either satisfied or missing. |
 | BR-MAT-005 | Mandatory requirements weigh more than optional preferences, and a hard eligibility conflict is shown separately from the overall score. |
 | BR-MAT-006 | A score is an aid to prioritization, not a promise of interview or employment. The interface must state this limitation. |
 | BR-MAT-007 | The person can correct an incorrectly extracted requirement; a correction produces a new result without rewriting the earlier result. |
-| BR-MAT-008 | The person's current criteria determine eligibility and ordering. A relevant profile, criteria or opportunity change reevaluates affected recommendations. Contact-only changes do not. The person can inspect the evidence and reason for inclusion or exclusion. |
+| BR-MAT-008 | The person's current criteria determine eligibility and ordering. A relevant profile, criteria or opportunity change reevaluates affected recommendations. Contact-only changes do not. The personalized list preserves the resulting order. The person can inspect the evidence and reason for inclusion or exclusion. |
 | BR-MAT-009 | A full-text opportunity version's completed requirement extraction is reused across profile evaluations that share that version. A link awaiting verification is not submitted for extraction. |
 
 ## Resume and application documents

@@ -63,6 +63,10 @@ synthetic final exports via the same HTTP boundary.
 `npm run test:ats-relevance` compares a synthetic final export with source-quoted
 requirements for an exact recommendation offer version via the V1-032 HTTP API.
 
+`npm run test:matching` and `npm run test:recommendations` exercise explicit minima
+through both Matching entry points. `npm run test:ats-qualifications` checks the
+severity and snapshot guards in the ATS report.
+
 ## Safety
 
 Fixtures are fictitious. Real message and application delivery is disabled. Provider sandboxes require separate configuration and explicit approval.

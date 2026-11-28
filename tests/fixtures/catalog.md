@@ -52,6 +52,7 @@ Status: V1 baseline. This document contains functional rules only. Technical des
 | BR-MAT-007 | The person can correct an incorrectly extracted requirement; a correction produces a new result without rewriting the earlier result. |
 | BR-MAT-008 | The person's current criteria determine eligibility and ordering. A relevant profile, criteria or opportunity change reevaluates affected recommendations. Contact-only changes do not. The personalized list preserves the resulting order. The person can inspect the evidence and reason for inclusion or exclusion. |
 | BR-MAT-009 | A full-text opportunity version's completed requirement extraction is reused across profile evaluations that share that version. A link awaiting verification is not submitted for extraction. |
+| BR-MAT-010 | A supported minimum in a verified, unambiguous offer statement is compared with a confirmed profile value on the same scale. A confirmed shortfall on a mandatory minimum is a hard conflict. An unknown value remains unassessed. |
 
 ## Resume and application documents
 
@@ -80,6 +81,7 @@ Status: V1 baseline. This document contains functional rules only. Technical des
 | BR-ATS-006 | An assessment applies to the exact resume version, format and artifact digest. A relevance assessment also identifies the exact offer version and requirement evidence. Regenerating or editing a document invalidates the previous assessment for the new version. |
 | BR-ATS-007 | CareerOS never guarantees that a document will pass every recruitment system or lead to an interview. |
 | BR-ATS-008 | A relevance report compares source-quoted requirement terms from the selected, owned offer version with wording in the final resume. It identifies located mentions and terms not located. Unreadable documents, links awaiting verification, and unavailable or changed offer evidence produce an inconclusive result or an explicit unavailable response. |
+| BR-ATS-009 | ATS reports confirmed mandatory qualification shortfalls as errors that can affect eligibility. It uses a Matching evaluation for the exact offer and the confirmed profile snapshot behind the final resume. Missing, optional or stale qualification evidence cannot produce an eligibility error. |
 
 ## Applications and lifecycle
 

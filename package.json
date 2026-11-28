@@ -17,6 +17,7 @@
     "test:ats-extraction": "node scripts/test-ats.mjs extraction",
     "test:ats-structure": "node scripts/test-ats.mjs structure",
     "test:ats-relevance": "node scripts/test-ats.mjs relevance",
+    "test:ats-qualifications": "node scripts/test-ats.mjs qualifications",
     "traceability": "node scripts/check-traceability.mjs",
     "coverage:no-new-gaps": "node scripts/check-traceability.mjs --no-new-gaps",
     "coverage:full": "node scripts/check-traceability.mjs --require-full"

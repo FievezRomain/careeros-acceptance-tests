@@ -104,4 +104,40 @@ with TestClient(create_app(settings, FixtureVerifier())) as app:
         denied = post(foreign)
         assert denied.status_code == 404 and denied.json()['code'] == 'SNAPSHOT_NOT_FOUND'
 
+    qualified = command()
+    qualified['profile']['confirmedFacts'] = [
+        {'factId': uid(11), 'key': 'python', 'level': 5, 'experienceMonths': 24},
+        {'factId': uid(12), 'key': 'english', 'level': 3},
+        {'factId': uid(13), 'key': 'sql', 'level': 4},
+        {'factId': uid(14), 'key': 'French', 'level': 4, 'cefr': 'B1'},
+    ]
+    qualified['opportunity']['requirements'] = [
+        {'requirementId': uid(21), 'key': 'Python', 'minimumLevel': 1, 'mandatory': True,
+         'statement': 'Python: at least 5 years of experience'},
+        {'requirementId': uid(22), 'key': 'English', 'minimumLevel': 1, 'mandatory': True,
+         'statement': 'English B2 required'},
+        {'requirementId': uid(23), 'key': 'SQL', 'minimumLevel': 1, 'mandatory': True,
+         'statement': 'SQL level 4/5'},
+        {'requirementId': uid(24), 'key': 'French', 'minimumLevel': 1, 'mandatory': False,
+         'statement': 'French B2 preferred'},
+        {'requirementId': uid(25), 'key': 'Python', 'minimumLevel': 1, 'mandatory': True,
+         'statement': 'Python: 2 to 5 years'},
+    ]
+    result = post(qualified)
+    assert result.status_code == 200, result.text
+    result = result.json()
+    findings = {finding['requirementId']: finding for finding in result['findings']}
+    assert result['qualificationPolicy'] == 'explicit-requirements-v1'
+    assert result['hardConflicts'] == [uid(21)]
+    assert findings[uid(21)]['qualification'] == {
+        'unit': 'experience_months', 'required': 60, 'confirmed': 24, 'status': 'not_met',
+    }
+    assert findings[uid(22)]['status'] == 'unknown'
+    assert findings[uid(22)]['qualification']['confirmed'] is None
+    assert findings[uid(23)]['qualification']['status'] == 'met'
+    assert findings[uid(24)]['qualification']['status'] == 'not_met'
+    assert not findings[uid(24)]['hardEligibility']
+    assert 'qualification' not in findings[uid(25)]
+
 print('V1-023 and V1-025 HTTP acceptance passed for BR-MAT-001 through BR-MAT-006.')
+print('Matching explicit minima HTTP acceptance passed for BR-MAT-010.')

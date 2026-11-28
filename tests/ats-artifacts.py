@@ -32,6 +32,9 @@ UNAVAILABLE = UUID(int=313)
 OTHER_OFFER = UUID(int=314)
 NO_SUGGESTIONS = UUID(int=315)
 MALFORMED = UUID(int=316)
+CONFIRMED_PROFILE = UUID(int=317)
+OLD_PROFILE = UUID(int=318)
+MISMATCHED_OFFER_GROUP = UUID(int=319)
 ISSUER = "https://identity.example.invalid"
 AUDIENCE = "careeros-acceptance"
 SCOPES = "ats:extractions:read resume:versions:read"
@@ -115,6 +118,20 @@ def upstream(request):
     assert request.headers["X-Correlation-ID"] == CORRELATION
     if request.url.host == "matching.example.invalid":
         return requirements(request, claims)
+    parts = request.url.path.split("/")
+    if len(parts) == 6:
+        _, api, noun, resume, versions, number = parts
+        assert (api, noun, resume, versions) == ("v1", "resumes", str(RESUME), "versions")
+        if (claims["sub"], claims["tenant_id"]) != (OWNER, TENANT):
+            return httpx2.Response(404)
+        return httpx2.Response(200, json={
+            "resumeId": str(RESUME), "version": int(number),
+            "profileSnapshotId": str(OLD_PROFILE if number == "4" else CONFIRMED_PROFILE),
+            "artifacts": [
+                {"format": format, "sha256": sha256(content).hexdigest()}
+                for (version, format), (_, content) in artifacts.items() if version == int(number)
+            ],
+        })
     _, api, noun, resume, versions, number, resource, kind = request.url.path.split("/")
     assert (api, noun, resume, versions, resource) == ("v1", "resumes", str(RESUME), "versions", "artifacts")
     assert request.method == "GET"
@@ -131,15 +148,39 @@ def upstream(request):
 
 
 def requirements(request, claims):
-    _, api, resource, group, operation = request.url.path.split("/")
-    assert (request.method, api, resource, operation) == ("GET", "v1", "recommendations", "extraction")
+    _, api, resource, group, *operation = request.url.path.split("/")
+    assert (request.method, api, resource) == ("GET", "v1", "recommendations")
+    assert operation in ([], ["extraction"])
     if (claims["sub"], claims["tenant_id"]) != (OWNER, TENANT) or "matching:recommendations:read" not in claims["scope"].split():
         return httpx2.Response(404)
     if UUID(group) == UNAVAILABLE:
         return httpx2.Response(503)
     if UUID(group) == MALFORMED:
         return httpx2.Response(200, json={"unexpected": True})
-    if UUID(group) not in {GROUP, EXTERNAL, NO_SUGGESTIONS}:
+    if not operation:
+        assert UUID(group) in {GROUP, MISMATCHED_OFFER_GROUP}
+        def qualification(identifier, statement, unit, required, confirmed, status, hard):
+            return {
+                "requirementId": str(UUID(int=identifier)), "statement": statement,
+                "hardEligibility": hard, "minimumLevel": 1, "confirmedLevel": 3,
+                "factId": str(UUID(int=identifier + 10)),
+                "status": {"met": "satisfied", "not_met": "partial", "unknown": "unknown"}[status],
+                "qualification": {"unit": unit, "required": required, "confirmed": confirmed, "status": status},
+            }
+        return httpx2.Response(200, json={
+            "evaluationId": str(UUID(int=340)),
+            "match": {
+                "profileSnapshotId": str(CONFIRMED_PROFILE),
+                "opportunityVersionId": str(OTHER_OFFER if UUID(group) == MISMATCHED_OFFER_GROUP else OFFER),
+                "findings": [
+                    qualification(321, "Python: at least 5 years of experience", "experience_months", 60, 24, "not_met", True),
+                    qualification(322, "French B2 preferred", "cefr", "B2", "B1", "not_met", False),
+                    qualification(323, "English C1 required", "cefr", "C1", None, "unknown", True),
+                    qualification(324, "SQL level 4/5", "level", 4, 4, "met", True),
+                ],
+            },
+        })
+    if UUID(group) not in {GROUP, EXTERNAL, NO_SUGGESTIONS, MISMATCHED_OFFER_GROUP}:
         return httpx2.Response(404)
     status = {EXTERNAL: "external_to_verify", NO_SUGGESTIONS: "inconclusive"}.get(UUID(group), "extracted")
     suggestions = [
@@ -285,11 +326,41 @@ def check_relevance(client):
     assert response(offer="invalid").status_code == 422
 
 
-checks = {"extraction": check, "structure": check_structure, "relevance": check_relevance}
+def check_qualifications(client):
+    def assessment(version=7, group=GROUP):
+        response = client.get(
+            extraction(version, "pdf", "relevance"),
+            params={"opportunityGroupId": str(group), "opportunityVersionId": str(OFFER)},
+            headers=headers(scopes=RELEVANCE_SCOPES),
+        )
+        assert response.status_code == 200, response.text
+        return response.json()["qualificationAssessment"]
+
+    result = assessment()
+    assert result["status"] == "evaluated" and result["profileSnapshotId"] == str(CONFIRMED_PROFILE)
+    findings = result["findings"]
+    assert [item["severity"] for item in findings] == ["error", "warning", "warning", "info"]
+    assert findings[0]["unit"] == "experience_months" and findings[0]["required"] == 60
+    assert findings[0]["confirmed"] == 24 and findings[0]["status"] == "not_met"
+    assert findings[0]["statement"] == "Python: at least 5 years of experience"
+    assert findings[2]["confirmed"] is None and findings[2]["status"] == "unknown"
+    assert assessment(4) == {
+        "status": "profile_snapshot_changed", "profileSnapshotId": None, "evaluationId": None, "findings": [],
+    }
+    mismatched = assessment(group=MISMATCHED_OFFER_GROUP)
+    assert mismatched["status"] == "offer_version_changed" and mismatched["findings"] == []
+
+
+checks = {"extraction": check, "structure": check_structure, "relevance": check_relevance,
+          "qualifications": check_qualifications}
 scenario = sys.argv[1]
 with httpx2.Client(transport=httpx2.MockTransport(upstream)) as resume:
-    use_case = ExtractText(HttpResumeArtifacts(resume, "https://resume.example.invalid"), DocumentText())
-    relevance = AssessRelevance(HttpRequirementEvidence(resume, "https://matching.example.invalid"))
+    artifacts_client = HttpResumeArtifacts(resume, "https://resume.example.invalid")
+    use_case = ExtractText(artifacts_client, DocumentText())
+    relevance = AssessRelevance(
+        HttpRequirementEvidence(resume, "https://matching.example.invalid"),
+        artifacts_client if scenario == "qualifications" else None,
+    )
     with TestClient(create_app(use_case, OidcVerifier(Keys(), ISSUER, AUDIENCE), relevance=relevance)) as ats:
         checks[scenario](ats)
 print(f"ATS {scenario} HTTP acceptance passed.")

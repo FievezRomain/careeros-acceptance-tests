@@ -158,4 +158,30 @@ with TestClient(create_app(settings, Identity(), extractor, SqlRecommendationSto
     assert call(soft_detail)['reason'] == 'expired'
     assert all(row['groupId'] != uid(73) for row in listing()) and len(outbox()) == 3
 
+    with_duration = profile(1, 8, 5, threshold=40)
+    with_duration['criteria']['criteriaVersionId'] = uid(118)
+    with_duration['profile']['confirmedFacts'][0]['experienceMonths'] = 24
+    update(with_duration)
+    quantified = opportunity(1, 1, group=74, version=85)
+    statement = 'Python: at least 5 years of experience.'
+    quantified['source']['jobText'] += f' {statement}'
+    quantified['job']['opportunity']['requirements'][0].update(
+        minimumLevel=1, hardEligibility=False, statement=statement,
+    )
+    assert update(quantified)['emitted'] == 0
+    quantified_detail = f'/v1/recommendations/{uid(74)}'
+    blocked = call(quantified_detail)
+    assert blocked['reason'] == 'hard_conflict' and blocked['match']['hardConflicts'] == [uid(61)]
+    finding = blocked['match']['findings'][0]
+    assert finding['statement'] == statement
+    assert finding['qualification'] == {
+        'unit': 'experience_months', 'required': 60, 'confirmed': 24, 'status': 'not_met',
+    }
+    without_duration = profile(1, 9, 5, threshold=40)
+    without_duration['criteria']['criteriaVersionId'] = uid(118)
+    update(without_duration)
+    unknown = call(quantified_detail)
+    assert unknown['match']['hardConflicts'] == []
+    assert unknown['match']['findings'][0]['qualification']['status'] == 'unknown'
+
 print('V1-058 HTTP acceptance passed for recommendation decisions, evidence, ownership and replay.')

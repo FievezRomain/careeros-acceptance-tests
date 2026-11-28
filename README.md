@@ -45,6 +45,9 @@ synthetic service responses. Run `npm ci` in `apps/web` first.
 `npm run test:resume-versions` exercises V1-027 through the resume HTTP API.
 Install the locked development environment in `services/resume-service` first.
 
+`npm run test:resume-drafts` exercises V1-028 through the resume HTTP API
+with synthetic responses from the versioned profile and job APIs.
+
 ## Safety
 
 Fixtures are fictitious. Real message and application delivery is disabled. Provider sandboxes require separate configuration and explicit approval.

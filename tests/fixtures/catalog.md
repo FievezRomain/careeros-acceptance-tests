@@ -72,11 +72,11 @@ Status: V1 baseline. This document contains functional rules only. Technical des
 
 | ID | Business rule |
 | --- | --- |
-| BR-ATS-001 | An ATS assessment applies to the final exported document, not merely to its editable draft. |
+| BR-ATS-001 | An ATS assessment applies to the final owned, immutable PDF or DOCX export. Extraction identifies its exact resume version, format and content digest. |
 | BR-ATS-002 | Structural findings and relevance findings are reported separately. |
 | BR-ATS-003 | Every finding identifies the affected content, the rule applied and a concrete correction when one is available. |
 | BR-ATS-004 | A technical score reflects only the published CareerOS checks and is never described as the score of a named employer's ATS. |
-| BR-ATS-005 | Missing or unreadable content produces an explicit inconclusive result rather than a passing score. |
+| BR-ATS-005 | An export with missing or unreadable text produces an explicit inconclusive result limited to its artifact identifiers and a reason. |
 | BR-ATS-006 | Regenerating or editing a document invalidates the previous assessment for the new version. |
 | BR-ATS-007 | CareerOS never guarantees that a document will pass every recruitment system or lead to an interview. |
 

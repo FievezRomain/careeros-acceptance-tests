@@ -54,6 +54,9 @@ then extracts their text through the V1-029 HTTP boundary.
 `npm run test:recommendation-resume` exercises pinned generation, preview,
 explicit approval and stale-profile detection for V1-059.
 
+`npm run test:ats-extraction` exercises V1-030 through the ATS HTTP API with
+synthetic final exports. Install the locked environment in `services/ats-service` first.
+
 ## Safety
 
 Fixtures are fictitious. Real message and application delivery is disabled. Provider sandboxes require separate configuration and explicit approval.

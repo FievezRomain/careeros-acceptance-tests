@@ -13,6 +13,7 @@
     "test:resume-versions": "node scripts/test-resume.mjs versions",
     "test:resume-drafts": "node scripts/test-resume.mjs drafts",
     "test:resume-exports": "node scripts/test-resume.mjs exports",
+    "test:recommendation-resume": "node scripts/test-resume.mjs recommendation",
     "traceability": "node scripts/check-traceability.mjs",
     "coverage:no-new-gaps": "node scripts/check-traceability.mjs --no-new-gaps",
     "coverage:full": "node scripts/check-traceability.mjs --require-full"

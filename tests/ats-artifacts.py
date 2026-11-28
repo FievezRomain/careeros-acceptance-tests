@@ -1,5 +1,6 @@
 """Exercise the ATS public API and its delegation to the final artifact route."""
 
+import sys
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from io import BytesIO
@@ -32,8 +33,8 @@ DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 def pdf(text):
     stream = BytesIO()
     canvas = Canvas(stream)
-    if text:
-        canvas.drawString(72, 720, text)
+    for index, line in enumerate(text.splitlines()):
+        canvas.drawString(72, 720 - 14 * index, line)
     canvas.showPage()
     canvas.save()
     return stream.getvalue()
@@ -78,8 +79,8 @@ def headers(account=OWNER, tenant=TENANT, scopes=SCOPES):
     return {"Authorization": f"Bearer {token}", "X-Correlation-ID": CORRELATION}
 
 
-def extraction(number, kind):
-    return f"/v1/resumes/{RESUME}/versions/{number}/artifacts/{kind}/extraction"
+def extraction(number, kind, report="extraction"):
+    return f"/v1/resumes/{RESUME}/versions/{number}/artifacts/{kind}/{report}"
 
 
 artifacts = {
@@ -88,6 +89,9 @@ artifacts = {
     (2, "docx"): (DOCX, docx()),
     (3, "pdf"): (PDF, pdf("")),
     (3, "docx"): (DOCX, b"unreadable synthetic file"),
+    (4, "pdf"): (PDF, pdf("Experience\nSynthetic developer\n2022 to 2024\nSkills\nPython")),
+    (5, "pdf"): (PDF, pdf("Experience\nSynthetic developer\nSkills\nPython")),
+    (6, "pdf"): (PDF, pdf("Skills\nPython")),
 }
 reads = []
 
@@ -151,8 +155,54 @@ def check(client):
     assert client.get(extraction(10, "pdf"), headers=headers()).status_code == 503
 
 
+def check_structure(client):
+    def report(number, kind="pdf"):
+        response = client.get(extraction(number, kind, "structure"), headers=headers())
+        assert response.status_code == 200, response.text
+        assert response.headers["Cache-Control"] == "no-store"
+        result = response.json()
+        assert result["resumeId"] == str(RESUME) and result["version"] == number
+        assert result["format"] == kind and result["rubricVersion"] == "structure-v1"
+        assert result["artifactSha256"] == sha256(artifacts[number, kind][1]).hexdigest()
+        assert "text" not in result
+        return result
+
+    complete = report(4)
+    assert complete["status"] == "evaluated" and complete["technicalScore"] == 100
+    assert complete["applicablePoints"] == complete["earnedPoints"] == 100
+    assert all(check["status"] == "passed" for check in complete["checks"])
+    assert report(4) == complete
+
+    updated = report(5)
+    assert updated["artifactSha256"] != complete["artifactSha256"]
+    assert updated["technicalScore"] == updated["earnedPoints"] == 75
+    assert updated["applicablePoints"] == 100
+    dates = next(check for check in updated["checks"] if check["ruleId"] == "experience_dates")
+    assert dates["status"] == "needs_attention" and dates["line"] == 1
+    assert "dates" in dates["correction"].lower()
+    assert report(4) == complete
+
+    skills = report(6)
+    assert skills["technicalScore"] == 100 and skills["applicablePoints"] == 75
+    dates = next(check for check in skills["checks"] if check["ruleId"] == "experience_dates")
+    assert dates["status"] == "not_applicable"
+    docx_report = report(2, "docx")
+    assert docx_report["technicalScore"] == 53 and docx_report["applicablePoints"] == 75
+
+    blank = report(3)
+    assert blank["status"] == "inconclusive" and blank["reason"] == "no_text"
+    assert "technicalScore" not in blank and "checks" not in blank
+    route = extraction(4, "pdf", "structure")
+    assert client.get(route).status_code == 401
+    assert client.get(route, headers=headers(scopes="resume:versions:read")).status_code == 403
+    assert client.get(route, headers=headers(tenant=str(UUID(int=306)))).status_code == 404
+    assert client.get(extraction(0, "pdf", "structure"), headers=headers()).status_code == 422
+
+
+checks = {"extraction": check, "structure": check_structure}
+scenario = sys.argv[1]
 with httpx2.Client(transport=httpx2.MockTransport(upstream)) as resume:
     use_case = ExtractText(HttpResumeArtifacts(resume, "https://resume.example.invalid"), DocumentText())
     with TestClient(create_app(use_case, OidcVerifier(Keys(), ISSUER, AUDIENCE))) as ats:
-        check(ats)
-print("V1-030 HTTP acceptance passed for exact owned artifacts, extraction and inconclusive results.")
+        checks[scenario](ats)
+print(f"ATS {scenario} HTTP acceptance passed.")

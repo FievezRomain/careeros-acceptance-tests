@@ -57,6 +57,9 @@ explicit approval and stale-profile detection for V1-059.
 `npm run test:ats-extraction` exercises V1-030 through the ATS HTTP API with
 synthetic final exports. Install the locked environment in `services/ats-service` first.
 
+`npm run test:ats-structure` exercises the versioned V1-031 checks and score against
+synthetic final exports via the same HTTP boundary.
+
 ## Safety
 
 Fixtures are fictitious. Real message and application delivery is disabled. Provider sandboxes require separate configuration and explicit approval.

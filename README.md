@@ -42,6 +42,9 @@ recommendation outbox through HTTP with synthetic identities and a disposable SQ
 `npm run test:job-match-ui` exercises the protected React routes for V1-026 with
 synthetic service responses. Run `npm ci` in `apps/web` first.
 
+`npm run test:resume-versions` exercises V1-027 through the resume HTTP API.
+Install the locked development environment in `services/resume-service` first.
+
 ## Safety
 
 Fixtures are fictitious. Real message and application delivery is disabled. Provider sandboxes require separate configuration and explicit approval.

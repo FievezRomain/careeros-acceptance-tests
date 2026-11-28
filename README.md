@@ -48,6 +48,9 @@ Install the locked development environment in `services/resume-service` first.
 `npm run test:resume-drafts` exercises V1-028 through the resume HTTP API
 with synthetic responses from the versioned profile and job APIs.
 
+`npm run test:resume-exports` renders and downloads both final file formats,
+then extracts their text through the V1-029 HTTP boundary.
+
 ## Safety
 
 Fixtures are fictitious. Real message and application delivery is disabled. Provider sandboxes require separate configuration and explicit approval.

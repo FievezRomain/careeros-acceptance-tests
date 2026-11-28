@@ -16,6 +16,7 @@
     "test:recommendation-resume": "node scripts/test-resume.mjs recommendation",
     "test:ats-extraction": "node scripts/test-ats.mjs extraction",
     "test:ats-structure": "node scripts/test-ats.mjs structure",
+    "test:ats-relevance": "node scripts/test-ats.mjs relevance",
     "traceability": "node scripts/check-traceability.mjs",
     "coverage:no-new-gaps": "node scripts/check-traceability.mjs --no-new-gaps",
     "coverage:full": "node scripts/check-traceability.mjs --require-full"

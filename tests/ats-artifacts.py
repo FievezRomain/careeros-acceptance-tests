@@ -15,17 +15,27 @@ from reportlab.pdfgen.canvas import Canvas
 
 from careeros_ats.adapters.documents import DocumentText
 from careeros_ats.adapters.http import create_app
+from careeros_ats.adapters.matching import HttpRequirementEvidence
 from careeros_ats.adapters.oidc import OidcVerifier
 from careeros_ats.adapters.resume import HttpResumeArtifacts
 from careeros_ats.application.extraction import ExtractText
+from careeros_ats.application.relevance import AssessRelevance
 
 RESUME = UUID(int=301)
 OWNER = str(UUID(int=302))
 TENANT = str(UUID(int=303))
 CORRELATION = str(UUID(int=304))
+GROUP = UUID(int=310)
+EXTERNAL = UUID(int=311)
+OFFER = UUID(int=312)
+UNAVAILABLE = UUID(int=313)
+OTHER_OFFER = UUID(int=314)
+NO_SUGGESTIONS = UUID(int=315)
+MALFORMED = UUID(int=316)
 ISSUER = "https://identity.example.invalid"
 AUDIENCE = "careeros-acceptance"
 SCOPES = "ats:extractions:read resume:versions:read"
+RELEVANCE_SCOPES = SCOPES + " matching:recommendations:read"
 PDF = "application/pdf"
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
@@ -92,6 +102,7 @@ artifacts = {
     (4, "pdf"): (PDF, pdf("Experience\nSynthetic developer\n2022 to 2024\nSkills\nPython")),
     (5, "pdf"): (PDF, pdf("Experience\nSynthetic developer\nSkills\nPython")),
     (6, "pdf"): (PDF, pdf("Skills\nPython")),
+    (7, "pdf"): (PDF, pdf("Skills\nPYTHON and C++")),
 }
 reads = []
 
@@ -102,6 +113,8 @@ def upstream(request):
         key.public_key(), algorithms=["RS256"], issuer=ISSUER, audience=AUDIENCE,
     )
     assert request.headers["X-Correlation-ID"] == CORRELATION
+    if request.url.host == "matching.example.invalid":
+        return requirements(request, claims)
     _, api, noun, resume, versions, number, resource, kind = request.url.path.split("/")
     assert (api, noun, resume, versions, resource) == ("v1", "resumes", str(RESUME), "versions", "artifacts")
     assert request.method == "GET"
@@ -115,6 +128,34 @@ def upstream(request):
         return httpx2.Response(404)
     content_type, content = artifact
     return httpx2.Response(200, headers={"Content-Type": content_type}, content=content)
+
+
+def requirements(request, claims):
+    _, api, resource, group, operation = request.url.path.split("/")
+    assert (request.method, api, resource, operation) == ("GET", "v1", "recommendations", "extraction")
+    if (claims["sub"], claims["tenant_id"]) != (OWNER, TENANT) or "matching:recommendations:read" not in claims["scope"].split():
+        return httpx2.Response(404)
+    if UUID(group) == UNAVAILABLE:
+        return httpx2.Response(503)
+    if UUID(group) == MALFORMED:
+        return httpx2.Response(200, json={"unexpected": True})
+    if UUID(group) not in {GROUP, EXTERNAL, NO_SUGGESTIONS}:
+        return httpx2.Response(404)
+    status = {EXTERNAL: "external_to_verify", NO_SUGGESTIONS: "inconclusive"}.get(UUID(group), "extracted")
+    suggestions = [
+        {"requirementId": str(UUID(int=index)), "description": term, "category": "skill",
+         "evidence": [quote], "suggestedMandatory": True}
+        for index, term, quote in (
+            (321, "Python", "Experience using Python."),
+            (322, "Kubernetes", "Knowledge of Kubernetes preferred."),
+            (323, "C", "Experience using C."),
+            (324, "Docker", "Experience using PostgreSQL."),
+        )
+    ] if status == "extracted" else []
+    return httpx2.Response(200, json={
+        "opportunityVersionId": str(OFFER), "extractorVersion": "requirements-v1",
+        "status": status, "suggestions": suggestions,
+    })
 
 
 def check(client):
@@ -199,10 +240,56 @@ def check_structure(client):
     assert client.get(extraction(0, "pdf", "structure"), headers=headers()).status_code == 422
 
 
-checks = {"extraction": check, "structure": check_structure}
+def check_relevance(client):
+    def response(version=7, kind="pdf", group=GROUP, offer=OFFER, auth=None):
+        return client.get(
+            extraction(version, kind, "relevance"),
+            params={"opportunityGroupId": str(group), "opportunityVersionId": str(offer)},
+            headers=headers(scopes=RELEVANCE_SCOPES) if auth is None else auth,
+        )
+
+    evaluated = response()
+    assert evaluated.status_code == 200, evaluated.text
+    assert evaluated.headers["Cache-Control"] == "no-store"
+    result = evaluated.json()
+    assert result["status"] == "evaluated" and result["relevanceVersion"] == "mentions-v1"
+    assert result["opportunityGroupId"] == str(GROUP) and result["opportunityVersionId"] == str(OFFER)
+    assert result["artifactSha256"] == sha256(artifacts[7, "pdf"][1]).hexdigest()
+    assert result["requirementsStatus"] == "partial"
+    assert len(result["requirementsSha256"]) == 64 and result["requirementExtractorVersion"] == "requirements-v1"
+    assert "employer" in result["limitation"].lower()
+    assert response().json() == result
+    findings = {finding["requirement"]["description"]: finding for finding in result["findings"]}
+    assert set(findings) == {"Python", "Kubernetes", "C"}
+    assert findings["Python"]["status"] == "mentioned"
+    assert findings["Python"]["requirement"]["evidence"] == ["Experience using Python."]
+    assert findings["Python"]["resumeEvidence"] == {"line": 2, "matchedText": "PYTHON", "excerpt": "PYTHON and C++"}
+    assert findings["Kubernetes"]["status"] == findings["C"]["status"] == "not_mentioned"
+    assert findings["Kubernetes"]["correction"] and findings["Kubernetes"]["resumeEvidence"] is None
+    assert "technicalScore" not in result and "text" not in result
+    structure = client.get(extraction(7, "pdf", "structure"), headers=headers()).json()
+    assert "technicalScore" in structure and "findings" not in structure
+    doc = response(2, "docx").json()
+    assert doc["format"] == "docx" and doc["artifactSha256"] == sha256(artifacts[2, "docx"][1]).hexdigest()
+    assert all(finding["status"] == "not_mentioned" for finding in doc["findings"])
+    assert response(3).json()["reason"] == "no_text"
+    assert response(group=EXTERNAL).json()["reason"] == "external_to_verify"
+    stale = response(offer=OTHER_OFFER).json()
+    assert stale["reason"] == "offer_version_changed" and "findings" not in stale
+    assert response(group=NO_SUGGESTIONS).json()["reason"] == "no_verified_requirements"
+    assert response(group=UNAVAILABLE).status_code == response(group=MALFORMED).status_code == 503
+    assert response(group=OTHER_OFFER).status_code == 404
+    assert response(auth={}).status_code == 401
+    assert response(auth=headers(scopes=SCOPES)).status_code == 403
+    assert response(auth=headers(tenant=str(UUID(int=306)), scopes=RELEVANCE_SCOPES)).status_code == 404
+    assert response(offer="invalid").status_code == 422
+
+
+checks = {"extraction": check, "structure": check_structure, "relevance": check_relevance}
 scenario = sys.argv[1]
 with httpx2.Client(transport=httpx2.MockTransport(upstream)) as resume:
     use_case = ExtractText(HttpResumeArtifacts(resume, "https://resume.example.invalid"), DocumentText())
-    with TestClient(create_app(use_case, OidcVerifier(Keys(), ISSUER, AUDIENCE))) as ats:
+    relevance = AssessRelevance(HttpRequirementEvidence(resume, "https://matching.example.invalid"))
+    with TestClient(create_app(use_case, OidcVerifier(Keys(), ISSUER, AUDIENCE), relevance=relevance)) as ats:
         checks[scenario](ats)
 print(f"ATS {scenario} HTTP acceptance passed.")

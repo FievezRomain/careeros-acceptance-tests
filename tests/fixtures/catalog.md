@@ -77,8 +77,9 @@ Status: V1 baseline. This document contains functional rules only. Technical des
 | BR-ATS-003 | Every finding identifies the affected content, the rule applied and a concrete correction when one is available. Structural findings locate the affected content by document scope or extracted line. |
 | BR-ATS-004 | A technical score reflects only the published, versioned CareerOS checks applicable to the artifact and is never described as the score of a named employer's ATS. |
 | BR-ATS-005 | An export with missing or unreadable text produces an explicit inconclusive result limited to its artifact identifiers and a reason. |
-| BR-ATS-006 | A structural assessment applies to the exact resume version, format and artifact digest. Regenerating or editing a document invalidates the previous assessment for the new version. |
+| BR-ATS-006 | An assessment applies to the exact resume version, format and artifact digest. A relevance assessment also identifies the exact offer version and requirement evidence. Regenerating or editing a document invalidates the previous assessment for the new version. |
 | BR-ATS-007 | CareerOS never guarantees that a document will pass every recruitment system or lead to an interview. |
+| BR-ATS-008 | A relevance report compares source-quoted requirement terms from the selected, owned offer version with wording in the final resume. It identifies located mentions and terms not located. Unreadable documents, links awaiting verification, and unavailable or changed offer evidence produce an inconclusive result or an explicit unavailable response. |
 
 ## Applications and lifecycle
 

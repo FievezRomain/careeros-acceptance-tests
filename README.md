@@ -60,6 +60,9 @@ synthetic final exports. Install the locked environment in `services/ats-service
 `npm run test:ats-structure` exercises the versioned V1-031 checks and score against
 synthetic final exports via the same HTTP boundary.
 
+`npm run test:ats-relevance` compares a synthetic final export with source-quoted
+requirements for an exact recommendation offer version via the V1-032 HTTP API.
+
 ## Safety
 
 Fixtures are fictitious. Real message and application delivery is disabled. Provider sandboxes require separate configuration and explicit approval.
